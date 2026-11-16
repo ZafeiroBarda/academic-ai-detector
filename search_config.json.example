@@ -1,0 +1,11 @@
+{
+  "_οδηγίες": "Για έλεγχο λογοκλοπής σε ΟΛΟ το web (καλύπτει και τα ελληνικά αποθετήρια: Πέργαμος, ΙΚΕΕ, Νημερτής κλπ). Μετονόμασε αυτό το αρχείο σε search_config.json και συμπλήρωσε ΕΝΑΝ πάροχο.",
+  "_brave_βήμα_1": "ΣΥΝΙΣΤΑΤΑΙ — Brave Search API, δωρεάν 2.000 αναζητήσεις/μήνα: https://api-dashboard.search.brave.com/register (το Free plan ζητά κάρτα για επιβεβαίωση, ΔΕΝ χρεώνει)",
+  "_brave_βήμα_2": "API Keys → Create key → αντέγραψέ το στο πεδίο brave_api_key",
+  "brave_api_key": "ΒΑΛΕ_ΕΔΩ_ΤΟ_BRAVE_API_KEY",
+  "_google_προσοχή": "Η Google ΕΚΛΕΙΣΕ το Custom Search JSON API για νέους πελάτες (PERMISSION_DENIED ακόμη κι αν φαίνεται Enabled). Μόνο για παλιά projects που είχαν ήδη πρόσβαση.",
+  "google_api_key": "",
+  "google_cse_id": "",
+  "_contact_email": "ΠΡΟΑΙΡΕΤΙΚΟ — το δικό σου email για τα polite pools του OpenAlex/Crossref (πιο σταθερή εξυπηρέτηση). Άφησέ το κενό αν δεν θέλεις.",
+  "contact_email": ""
+}

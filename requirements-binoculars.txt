@@ -1,0 +1,5 @@
+# Προαιρετικό: δεύτερη μέθοδος ανίχνευσης Binoculars (βλ. binoculars_check.py)
+# Βαριές εξαρτήσεις (~1-3 GB) + λήψη μοντέλων από Hugging Face την πρώτη φορά.
+-r requirements.txt
+torch>=2.2
+transformers>=4.44

@@ -1,0 +1,3 @@
+# Τα .bat θέλουν CRLF στα Windows (αλλιώς τα goto/labels σπάνε περιστασιακά)
+*.bat text eol=crlf
+*.sh text eol=lf

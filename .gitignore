@@ -1,0 +1,30 @@
+# Μυστικά — το Google API key μένει ΜΟΝΟ τοπικά, ποτέ στο GitHub
+search_config.json
+
+# Corpus: οι εργασίες που ρίχνεις εδώ είναι ιδιωτικά έγγραφα
+corpus/*
+!corpus/README_CORPUS.txt
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Runtime / cache
+.corpus_index.json
+.image_index.json
+server.pid
+*.log
+search_config.json.tmp
+binoculars_config.json
+
+# Τοπική cache εξωτερικών ελέγχων (μόνο hashes + δημόσια μεταδεδομένα)
+.web_cache.sqlite3
+.web_cache.sqlite3-*
+
+# Ιστορικό αναλύσεων (τοπικά, προσωπικά δεδομένα)
+.analysis_history.sqlite3
+
+# Βαθμονόμηση στα δικά σου δεδομένα (μόνο σκορ)
+calibration_profile.json
+calibration_profile.json.tmp

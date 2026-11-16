@@ -1,0 +1,160 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python ${{ matrix.python-version }} — lint & tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt reportlab ruff
+
+      - name: Install Tesseract OCR (3.12 only; 3.10 tests the "not installed" path)
+        if: matrix.python-version == '3.12'
+        run: sudo apt-get update -q && sudo apt-get install -y -q tesseract-ocr tesseract-ocr-ell fonts-dejavu-core
+
+      - name: Lint (pyflakes errors & syntax only)
+        run: ruff check --select F,E9 --output-format github .
+
+      - name: Engine, i18n, files, thesis & security tests
+        run: python test_detector.py --files --thesis --security
+
+      - name: End-to-end server tests
+        run: |
+          python ai_detector_server.py > server.log 2>&1 &
+          for i in $(seq 30); do
+            curl -sf http://localhost:5000/health > /dev/null && break
+            sleep 1
+          done
+          python test_detector.py --server
+
+      - name: Server log (on failure)
+        if: failure()
+        run: cat server.log || true
+
+  binoculars:
+    name: Binoculars plugin (tiny local models)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install CPU-only torch + transformers
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "transformers>=4.44"
+      - name: Binoculars tests (no model downloads)
+        env:
+          BINOCULARS_TESTS_REQUIRED: "1"
+        run: python test_detector.py --binoculars
+
+  ui:
+    name: UI — JavaScript & translations
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+      - name: Check detector_academic.html
+        run: node tools/check_ui.js
+
+  live-web:
+    name: Live web services (informational)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Εξαρτάται από Crossref/OpenAlex/Wikipedia — μια διακοπή τους δεν μπλοκάρει το PR
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Real Crossref / OpenAlex / Wikipedia, twice (second run from cache)
+        run: python tools/live_smoke.py
+
+  windows:
+    name: Windows — run.bat / update.bat
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: run.bat — first start, then "already running" on a second start
+        shell: pwsh
+        run: |
+          # 1η εκκίνηση: venv + βιβλιοθήκες + server (στο παρασκήνιο)
+          $srv = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "run.bat", "--no-browser" `
+                 -RedirectStandardOutput run.log -RedirectStandardError run.err -NoNewWindow -PassThru
+          $ok = $false
+          for ($i = 0; $i -lt 240; $i++) {
+            try { $r = Invoke-RestMethod "http://127.0.0.1:5000/health" -TimeoutSec 2
+                  if ($r.status -eq "ok") { $ok = $true; break } } catch { }
+            Start-Sleep -Seconds 1
+          }
+          Get-Content run.log -Encoding utf8 -TotalCount 30
+          if (-not $ok) { Get-Content run.err -Encoding utf8; exit 1 }
+          Write-Host "Server is up, version $($r.version)"
+
+          # 2η εκκίνηση: πρέπει να δει ότι τρέχει ήδη και να τελειώσει αμέσως.
+          # Όριο 60 s ώστε ένα πρόβλημα να φαίνεται αντί να κολλάει το job.
+          $second = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "run.bat", "--no-browser" `
+                    -RedirectStandardOutput run2.log -RedirectStandardError run2.err -NoNewWindow -PassThru
+          $finished = $second.WaitForExit(60000)
+          $out = (Get-Content run2.log -Encoding utf8 -Raw) + (Get-Content run2.err -Encoding utf8 -Raw)
+          Write-Host $out
+          if (-not $finished) { taskkill /T /F /PID $second.Id | Out-Null; Write-Host "second start did not exit"; exit 1 }
+          if ($out -notmatch "already running") { exit 1 }
+          taskkill /T /F /PID $srv.Id | Out-Null
+      - name: update.bat migrates settings from an old folder
+        shell: pwsh
+        run: |
+          $old = Join-Path $env:RUNNER_TEMP "old-app"
+          New-Item -ItemType Directory -Force -Path (Join-Path $old "corpus") | Out-Null
+          Copy-Item ai_detector_server.py, detector_engine.py $old
+          Set-Content -Path (Join-Path $old "search_config.json") -Value '{"openalex_api_key": "Abcdef123456"}'
+          Set-Content -Path (Join-Path $old "corpus\old_thesis.txt") -Value "old thesis"
+          $p = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "echo.| update.bat --from `"$old`"" `
+               -RedirectStandardOutput upd.log -RedirectStandardError upd.err -NoNewWindow -PassThru
+          if (-not $p.WaitForExit(60000)) { taskkill /T /F /PID $p.Id | Out-Null; Write-Host "update.bat did not exit"; exit 1 }
+          Get-Content upd.log, upd.err -Encoding utf8
+          if (-not (Test-Path search_config.json)) { exit 1 }
+          if (-not (Test-Path corpus\old_thesis.txt)) { exit 1 }
