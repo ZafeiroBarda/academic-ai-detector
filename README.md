@@ -1,394 +1,292 @@
 # AI Content Detector v2.22
 
-> **English:** A local, open-source tool that checks **.docx / .pdf** theses (Greek and English)
-> for signs of AI-generated text and for plagiarism (local corpus, OpenAlex, Wikipedia, Crossref,
-> optional Brave Search). It runs **entirely on your own computer**: documents are never uploaded
-> anywhere, only short sample phrases are sent to public search APIs when web checks are enabled.
-> Start it with `run.bat` (Windows) or `./run.sh` (Linux/macOS) and open http://localhost:5000;
-> the interface is available in English, Greek, German, French and Portuguese.
-> **The score is an indication, not proof.** See [Limitations](#περιορισμοί) before using it
-> for any decision about a student. Licence: [MIT](LICENSE).
+**English** · [Ελληνικά](README.el.md)
 
+A local, open-source tool that checks **.docx** and **.pdf** documents, written in **Greek or English**,
+for signs of **AI-generated text** and for **plagiarism**. It is built for **long documents**
+(theses and dissertations of 50–200 pages).
 
-Εργαλείο ανίχνευσης AI-generated κειμένου **και λογοκλοπής** σε αρχεία **.docx** και **.pdf**, με πλήρη υποστήριξη **Ελληνικών και Αγγλικών**. Σχεδιασμένο για **μεγάλα έγγραφα** (διπλωματικές 50-200 σελίδων).
+It runs **entirely on your own computer**. Documents are never uploaded anywhere; when web checks are
+enabled, only short sample phrases are sent to public search services (OpenAlex, Wikipedia, Crossref,
+optionally Brave Search).
 
-## Έλεγχος Λογοκλοπής (λειτουργία τύπου Turnitin)
+> **The score is an indication, not proof.** Read the [Limitations](#limitations) before using it for
+> any decision about a student.
 
-Τέσσερις μηχανισμοί, ενεργοί από προεπιλογή (checkboxes στο UI):
+## Quick start
 
-1. **Τοπικό αρχείο εργασιών (`corpus/`)** — ρίξε στον φάκελο `corpus/` παλιές εργασίες (.docx/.pdf/.txt/.md). Κάθε νέο κείμενο συγκρίνεται μαζί τους με **winnowing fingerprints** (ο αλγόριθμος του MOSS/Stanford): βρίσκει κοινά αποσπάσματα ≥10 λέξεων, ανθεκτικά σε αλλαγές τόνων/κεφαλαίων, και βγάζει **ποσοστό ομοιότητας ανά πηγή + τα ακριβή χωρία** — όπως το similarity report του Turnitin. Το ευρετήριο χτίζεται μία φορά (cache) και ανανεώνεται αυτόματα.
-2. **Ακαδημαϊκή βιβλιογραφία — OpenAlex** (τύπου Google Scholar, χωρίς κλειδί) — δειγματοληπτικός exact-phrase έλεγχος σε **250M+ δημοσιεύσεις** (τίτλοι, abstracts, full-text όπου υπάρχει). Περιλαμβάνει ~247.000 ελληνόγλωσσες εγγραφές (132.000 με abstracts). Φράσεις που εμφανίζονται σε δεκάδες δημοσιεύσεις σημαίνονται ως «κοινότυπες» για αποφυγή ψευδοσυναγερμών.
-3. **Wikipedia (EN+EL)** — exact-phrase έλεγχος με σεβασμό στο rate limit (ομαδικά OR-queries, backoff σε 429, canary έλεγχος αξιοπιστίας).
-4. **Brave Search (προαιρετικό, με δωρεάν κλειδί — συνιστάται)** — ψάχνει τις φράσεις σε όλο το web μέσω του ανεξάρτητου index του Brave, άρα και στα PDF των ελληνικών ιδρυματικών αποθετηρίων (Πέργαμος, ΙΚΕΕ, Νημερτής κ.ά.) όπου ζουν οι περισσότερες ελληνικές πτυχιακές. Δωρεάν όριο 2.000 αναζητήσεις/μήνα (φτάνει για ~250 εργασίες). **Ρύθμιση μέσα από το UI**: πάτα «⚙ Αναζήτηση web: ρύθμιση» κάτω από τις καρτέλες — η φόρμα έχει το link εγγραφής, επαληθεύει το κλειδί ζωντανά και το αποθηκεύει μόνη της (στο `search_config.json`).
-5. **Google Custom Search (legacy)** — η Google **έκλεισε το Custom Search JSON API για νέους πελάτες** (νέα projects παίρνουν PERMISSION_DENIED ακόμη κι αν το API φαίνεται Enabled). Υποστηρίζεται μόνο για όσους έχουν παλιό Google Cloud project που είχε ήδη πρόσβαση.
+**Windows:** double-click `run.bat` · **Linux / macOS / WSL:** `./run.sh`
 
-**Τι ΔΕΝ κάνει:** δεν έχει πρόσβαση στην ιδιωτική βάση του Turnitin (συνδρομητικά journals πλήρους κειμένου, εργασίες που υποβλήθηκαν μόνο στο Turnitin). Για ελληνικές πτυχιακές ειδικά, ο συνδυασμός **OpenAlex + Brave key** δίνει την καλύτερη κάλυψη — το Brave key συνιστάται θερμά.
+`launcher.py` (called by both) checks Python, installs the libraries **only when** `requirements.txt`
+changes, opens your browser at http://localhost:5000 once the server is ready (or just opens the page
+if it is already running) and, on Windows, offers once to create a desktop shortcut
+(`python launcher.py --shortcut` to do it again).
 
-**Email επικοινωνίας (προαιρετικό).** Τα OpenAlex και Crossref δίνουν πιο σταθερή
-εξυπηρέτηση («polite pool») όταν το αίτημα έχει email επικοινωνίας. Το εργαλείο **δεν**
-περιέχει κανένα email· αν θέλεις, βάλε το δικό σου στο `search_config.json`
-(`"contact_email": "..."`) ή στη μεταβλητή `AI_DETECTOR_CONTACT_EMAIL`. Χωρίς αυτό οι
-έλεγχοι δουλεύουν κανονικά.
+The interface is available in **English, Greek, German, French and Portuguese** (buttons at the top
+right). A step-by-step guide for everyday use, in Greek, is in [QUICK_START.md](QUICK_START.md).
 
-## Μεγάλα έγγραφα (διπλωματικές)
-
-- Όριο αρχείου **100MB**, δοκιμασμένο σε PDF 200 σελίδων / 107.000 λέξεων (**~14s** συνολικά).
-- Κείμενα άνω των ~2500 λέξεων αναλύονται επιπλέον **ανά ενότητα ~1000 λέξεων**: το UI δείχνει χρωματιστή μπάρα για κάθε ενότητα, ώστε να φαίνεται **σε ποιο σημείο** του κειμένου υπάρχουν ενδείξεις AI — ένα AI-γραμμένο κεφάλαιο δεν «κρύβεται» στον μέσο όρο 200 σελίδων.
-- Αν το συνολικό σκορ είναι χαμηλό αλλά κάποιες ενότητες φλεγκάρουν, η ετυμηγορία γίνεται «Μικτό κείμενο — ενδείξεις AI σε Χ από Υ ενότητες».
-
-## Γρήγορη Εκκίνηση
-
-**Οδηγός βήμα-βήμα για καθημερινή χρήση: [QUICK_START.md](QUICK_START.md).**
-
-**Windows:** διπλό κλικ στο `run.bat` · **Linux / Mac / WSL:** `./run.sh`
-
-Το `launcher.py` (που καλούν) ελέγχει την Python, εγκαθιστά τις βιβλιοθήκες
-**μόνο όταν αλλάξει** το `requirements.txt`, ανοίγει **μόνο του** τον browser
-στο http://localhost:5000 όταν ο server είναι έτοιμος (ή απλώς τη σελίδα, αν
-τρέχει ήδη) και στα Windows προσφέρει μία φορά συντόμευση στην επιφάνεια
-εργασίας (`python launcher.py --shortcut` για ξανά).
-
-**Ρυθμίσεις μέσα από τη σελίδα (v2.15):** «⚙ Ρυθμίσεις» → κλειδί OpenAlex
-(επαληθεύεται ζωντανά πριν αποθηκευτεί· δεν εμφανίζεται ποτέ ξανά στη σελίδα),
-κλειδί Brave, και πόσο χώρο πιάνει η τοπική cache με κουμπί «Καθαρισμός».
-**Σκούρο θέμα** (κουμπί 🌙/☀ ή αυτόματα από τη ρύθμιση των Windows· η
-εκτύπωση μένει πάντα φωτεινή), **πρόοδος** ανεβάσματος σε % και χρόνος που
-πέρασε, **προσβασιμότητα** (καρτέλες με πληκτρολόγιο ← →, εμφανές focus,
-ανακοινώσεις για αναγνώστες οθόνης, αντίθεση κειμένου κατά WCAG AA, λιγότερη
-κίνηση όταν το ζητά το σύστημα).
-
-**Σύγκριση εκδόσεων (v2.16):** καρτέλα «Σύγκριση» → παλιά και νέα έκδοση της ίδιας
-εργασίας (.docx/.pdf): αλλαγή σκορ, δείκτες που άλλαξαν περισσότερο, πόσο κείμενο
-άλλαξε (νέες/αφαιρεμένες/ίδιες προτάσεις) και ποιες **νέες** προτάσεις έχουν ενδείξεις
-AI (`POST /compare-versions`, μόνο τοπικά, `version_compare.py`).
-
-**Corpus από τη σελίδα (v2.16):** καρτέλα «Corpus» → λίστα, προσθήκη (κουμπί ή
-drag & drop, .docx/.pdf/.txt/.md) και αφαίρεση παλιών εργασιών (`GET /corpus`,
-`POST /corpus/upload`, `POST /corpus/delete`, `corpus_manager.py`). Ασφάλεια:
-ασφαλή ονόματα (όχι διαδρομές/«..», όχι κρυφά ή δεσμευμένα ονόματα Windows),
-ποτέ αντικατάσταση (« (2)»), έλεγχος ότι το αρχείο διαβάζεται και έχει κείμενο
-πριν μπει στο corpus, αφαίρεση μόνο αρχείων της λίστας (όχι symlinks).
-
-**Ιστορικό αναλύσεων (v2.17):** καρτέλα «Ιστορικό» → ξανανοίγεις αποτελέσματα
-χωρίς νέα ανάλυση (`analysis_history.py`, `/history`). Προσωπικά δεδομένα (GDPR):
-μόνο τοπικά στο `.analysis_history.sqlite3` (0600), **χωρίς** ολόκληρο το κείμενο
-των εργασιών (μόνο το αποτέλεσμα και τα αποσπάσματα που σημειώθηκαν), αυτόματη
-διαγραφή μετά από 30 ημέρες και έως 100 εγγραφές, διακόπτης on/off, διαγραφή
-ανά εγγραφή ή όλων. Γράφει μόνο ο server (όχι δεδομένα από τον browser)·
-αναγνωριστικά 128 bit. Απενεργοποίηση εντελώς: `AI_DETECTOR_HISTORY=off`.
-Ο μαζικός έλεγχος και η σύγκριση εκδόσεων δεν αποθηκεύονται.
-
-**ZIP από eClass / Moodle (v2.18):** στην καρτέλα «Μαζικά» ρίχνεις το ZIP «λήψη
-όλων των υποβολών» (έως 60 εργασίες)· το όνομα του φοιτητή βγαίνει από τη δομή
-του ZIP (μοτίβο Moodle ή φάκελος ανά φοιτητή), και τα ελληνικά ονόματα από τα
-Windows (cp737) διαβάζονται σωστά. Ασφάλεια (`zip_import.py`): όρια πλήθους,
-μεγέθους και αναλογίας συμπίεσης μετρημένα κατά την αποσυμπίεση (zip bomb),
-τα ονόματα του ZIP δεν γίνονται ποτέ διαδρομές στον δίσκο (zip slip), όχι
-symlinks / κρυπτογραφημένα / ZIP μέσα σε ZIP / άλλους τύπους.
-
-**Εξαίρεση παραθεμάτων και βιβλιογραφίας (v2.18):** επιλογή (ενεργή από
-προεπιλογή) που αφαιρεί από τη **λογοκλοπή** (corpus, web, σύγκριση εργασιών)
-τα παραθέματα σε “ ” « » „ “ " " με 5+ λέξεις και την ενότητα βιβλιογραφίας στο
-τέλος — όπως το exclude quotes/bibliography του Turnitin. Συντηρητικά: όχι
-πάνω από 40% του κειμένου, όχι «Βιβλιογραφία» στα περιεχόμενα, όχι παραρτήματα.
-Η ανάλυση AI και ο έλεγχος αναφορών βλέπουν όλο το κείμενο (`text_exclusions.py`).
-
-**Βαθμονόμηση στα δικά σου δεδομένα (v2.18):** καρτέλα «Corpus» → δίνεις 10+
-εργασίες που σίγουρα γράφτηκαν από ανθρώπους (π.χ. πριν το 2022) από το πεδίο
-σου (αρχεία ή ZIP). Κάθε ανάλυση δείχνει μετά «στις N ανθρώπινες εργασίες
-αναφοράς σου, το X% είχε σκορ τόσο ή πιο υψηλό» και ένα προτεινόμενο όριο
-(≤5% ανθρώπινων πάνω από αυτό). Κρατιούνται μόνο τα σκορ — όχι κείμενα ή
-ονόματα (`score_calibration.py`, `calibration_profile.json`, `/calibration`).
-
-**Ίδιες εικόνες / διαγράμματα (v2.22):** όταν είναι τσεκαρισμένη η σύγκριση με το
-corpus, οι εικόνες της εργασίας (.docx/PDF) συγκρίνονται με τις εικόνες των
-εργασιών του corpus· στον μαζικό έλεγχο και μεταξύ τους. Κάθε εικόνα παίρνει
-«οπτικό αποτύπωμα» (difference hash 128 bit), οπότε βρίσκεται και σε άλλο
-μέγεθος ή συμπίεση· δείχνονται μικρογραφίες δίπλα-δίπλα. Εικονίδια (<100 px),
-μονόχρωμες εικόνες και ό,τι υπάρχει σε 3+ εργασίες (λογότυπο ιδρύματος, πρότυπο
-εξωφύλλου) αγνοούνται. Μόνο PNG/JPEG/GIF/BMP/TIFF/WEBP, με όρια μεγέθους, pixels,
-συμπίεσης και χρόνου· στο corpus κρατιούνται μόνο τα αποτυπώματα
-(`corpus/.image_index.json`), όχι οι εικόνες, και στο ιστορικό όχι οι μικρογραφίες
-(`image_reuse.py`).
-
-**OCR για σκαναρισμένα PDF (v2.20):** αν ένα PDF είναι κυρίως εικόνες (≥50% των
-σελίδων χωρίς κείμενο), οι σελίδες περνούν από το δωρεάν Tesseract (ελληνικά +
-αγγλικά) — προαιρετικό: χωρίς αυτό, καθαρό μήνυμα με οδηγίες εγκατάστασης. Όρια:
-80 σελίδες, 60″ ανά σελίδα, 10′ ανά έγγραφο, εικόνα έως 4000 px, ένα έγγραφο κάθε
-φορά· το Tesseract καλείται χωρίς shell, με την εικόνα από stdin (κανένα
-προσωρινό αρχείο). Το αποτέλεσμα σημειώνεται («📷 OCR») γιατί τα λάθη αναγνώρισης
-μειώνουν την αξιοπιστία. `AI_DETECTOR_OCR=off` το απενεργοποιεί,
-`AI_DETECTOR_TESSERACT` δίνει άλλη θέση εκτελέσιμου (`ocr_pdf.py`).
-
-**Πρακτικό ελέγχου .docx (v2.19):** στα αποτελέσματα «📄 Πρακτικό ελέγχου» →
-συμπληρώνεις ίδρυμα, τμήμα, φοιτητή, τίτλο, εξεταστή και σημειώσεις και κατεβάζεις
-Word με τα ευρήματα (AI, ομοιότητα, αναφορές, άλλες ενδείξεις), την αποποίηση
-«ένδειξη, όχι απόδειξη» και γραμμή υπογραφής, για τον φάκελο του φοιτητή. Το
-αρχείο φτιάχνεται στη μνήμη και δεν αποθηκεύεται πουθενά· ο server δέχεται μόνο
-συγκεκριμένα πεδία με όρια μήκους (`report_docx.py`, `/report/docx`).
-
-**Ενημέρωση:** git clone → `update.bat` / `./update.sh` (κάνει `git pull`). Από
-ZIP → αποσυμπίεσε τη νέα έκδοση σε νέο φάκελο και τρέξε εκεί `update.bat`
-δίνοντας τον παλιό φάκελο: μεταφέρονται κλειδιά (`search_config.json`),
-`corpus/`, cache και ιστορικό, χωρίς να αντικατασταθεί τίποτα (`tools/update.py`).
-
-Χειροκίνητα:
+Manual setup:
 
 ```bash
 python -m venv venv
-venv\Scripts\activate          # Windows  (Linux: source venv/bin/activate)
+venv\Scripts\activate          # Windows  (Linux/macOS: source venv/bin/activate)
 pip install -r requirements.txt
 python ai_detector_server.py
 ```
 
-## Πώς Δουλεύει (Engine v2.0)
+**Updating:** from a git clone, run `update.bat` / `./update.sh` (it runs `git pull`). From a ZIP,
+unzip the new version into a new folder and run `update.bat` there, pointing it at the old folder:
+keys (`search_config.json`), `corpus/`, cache and history are carried over without overwriting
+anything (`tools/update.py`).
 
-Ο πυρήνας (`detector_engine.py`) συνδυάζει **στατιστικά χαρακτηριστικά** με βάρη — όχι απλά regex όπως η v1:
+## Plagiarism check (Turnitin-style)
 
-### Δείκτες AI γραφής
+Enabled by default (checkboxes in the UI):
 
-| Δείκτης | Βάρος | Τι μετράει |
+1. **Local archive of past work (`corpus/`).** Drop old theses (.docx/.pdf/.txt/.md) into `corpus/`,
+   or manage them from the **Corpus** tab. Each new document is compared with them using
+   **winnowing fingerprints** (the MOSS/Stanford algorithm). It finds shared passages of 10+ words,
+   robust to changes in accents and capitalisation, and reports a **similarity percentage per source
+   plus the exact passages**, like a Turnitin similarity report. The index is built once and refreshed
+   automatically.
+2. **Academic literature: OpenAlex** (Google Scholar-like, no key required). A sampled exact-phrase
+   check against **250M+ publications** (titles, abstracts, full text where available), including
+   ~247,000 Greek-language records. Phrases found in dozens of publications are marked as "common"
+   to avoid false alarms.
+3. **Wikipedia (EN + EL).** Exact-phrase check that respects the rate limits (batched OR queries,
+   backoff on 429, a canary check that detects silently degraded answers).
+4. **Brave Search (optional, free key, recommended).** Searches the whole web through Brave's
+   independent index, which includes the PDFs in Greek institutional repositories (Pergamos, IKEE,
+   Nemertes, etc.) where most Greek theses live. The free tier is 2,000 searches/month (~250 theses).
+   Set it up from the UI: **⚙ Settings** has the sign-up link, verifies the key live and saves it
+   to `search_config.json`.
+5. **Google Custom Search (legacy).** Google has **closed the Custom Search JSON API to new
+   customers** (new projects get `PERMISSION_DENIED` even when the API looks enabled). It is kept only
+   for old Google Cloud projects that already had access.
+
+**What it does NOT do:** it has no access to Turnitin's private database (subscription journals,
+papers submitted only to Turnitin). For Greek theses in particular, **OpenAlex + a Brave key** gives
+the best coverage.
+
+**Exclude quotes and bibliography** (on by default): quotations of 5+ words in “ ” « » „ “ " " and the
+bibliography section at the end are removed from the **plagiarism** comparison (corpus, web, batch),
+like Turnitin's exclude options. It is conservative: never more than 40% of the text, never a
+"Bibliography" entry in the table of contents, never appendices. The AI analysis and the reference
+check still see the full text (`text_exclusions.py`).
+
+**Reused images and diagrams:** when the corpus comparison is enabled, the images in a document
+(.docx/PDF) are compared with the images in the corpus and, in batch mode, with each other. Each
+image gets a visual fingerprint (128-bit difference hash), so it is found even after resizing or
+recompression, and matches are shown as side-by-side thumbnails. Icons (<100 px), single-colour images
+and anything that appears in 3+ documents (university logo, cover template) are ignored. Only
+PNG/JPEG/GIF/BMP/TIFF/WEBP, with limits on size, pixels, compression ratio and time; the corpus stores
+only fingerprints, never the images (`image_reuse.py`).
+
+**Contact email (optional).** OpenAlex and Crossref give more reliable service (their "polite pool")
+when requests include a contact email. The tool contains **no** email address; if you want, put yours
+in `search_config.json` (`"contact_email": "..."`) or in the `AI_DETECTOR_CONTACT_EMAIL` environment
+variable. Without it, everything still works.
+
+**OpenAlex key (recommended):** since February 2026, OpenAlex without a key has a very small daily
+limit (the literature check makes ~12–30 searches per thesis). Get a free key at openalex.org
+(account → API key, ~1,000 searches/day) and add it in **⚙ Settings**, in `search_config.json`
+(`{"openalex_api_key": "..."}`) or in `OPENALEX_API_KEY`. Keys stay local (the file is in
+`.gitignore`) and are never shown again on the page.
+
+## Long documents
+
+- File limit **100 MB**, tested on a 200-page / 107,000-word PDF (**~14 s** in total).
+- Texts over ~2,500 words are also analysed **in sections of ~1,000 words**. The UI shows a coloured
+  bar per section, so you can see **where** in the document the AI signals are: one AI-written chapter
+  does not hide in the average of 200 pages.
+- If the overall score is low but some sections are flagged, the verdict becomes "Mixed text: AI
+  signals in X of Y sections".
+
+## How the AI detection works
+
+The core (`detector_engine.py`, pure Python, no dependencies) combines weighted **statistical
+features**:
+
+### AI writing indicators
+
+| Indicator | Weight | What it measures |
 |---|---|---|
-| AI φράσεις & λεξιλόγιο | 0.32 | 100+ φράσεις ανά γλώσσα ("delve into", "it is important to note", "ever-evolving" / «εν κατακλείδι», «διαδραματίζει καθοριστικό ρόλο», «αναπόσπαστο κομμάτι»), σταθμισμένες κατά ένταση |
-| Burstiness | 0.16 | Διακύμανση μήκους προτάσεων — τα LLM γράφουν ασυνήθιστα ομοιόμορφες προτάσεις, ο άνθρωπος εναλλάσσει μικρές και μεγάλες |
-| Σύνδεσμοι αρχής πρότασης | 0.14 | Ποσοστό προτάσεων που ξεκινούν με However/Moreover/Furthermore ή Επιπλέον/Ωστόσο/Συνεπώς — τα LLM φτάνουν 20-45%, ο άνθρωπος 3-10% |
-| Rule of three | 0.08 | Τριάδες «Χ, Υ και Ζ» που λατρεύουν τα LLM |
-| Em-dashes (—) | 0.08 | Συστηματική χρήση em-dash, τυπική των μοντέλων 2024+ |
-| Μορφοποίηση chatbot | 0.07 | Υπολείμματα Markdown (`**bold**`, `###`, bullets) από copy-paste |
-| Ομοιομορφία παραγράφων | 0.06 | Παράγραφοι σχεδόν ίδιου μήκους |
-| Επανάληψη πρώτης λέξης | 0.05 | Προτάσεις που ξεκινούν συνέχεια με την ίδια λέξη |
+| AI phrases & vocabulary | 0.32 | 100+ phrases per language ("delve into", "it is important to note", "ever-evolving" / «εν κατακλείδι», «διαδραματίζει καθοριστικό ρόλο»), weighted by strength |
+| Burstiness | 0.16 | Variation in sentence length: LLMs write unusually uniform sentences, people mix short and long ones |
+| Sentence-initial connectives | 0.14 | Share of sentences starting with However/Moreover/Furthermore or Επιπλέον/Ωστόσο/Συνεπώς: LLMs reach 20–45%, people 3–10% |
+| Rule of three | 0.08 | "X, Y and Z" triplets that LLMs love |
+| Em dashes (—) | 0.08 | Systematic em-dash use, typical of 2024+ models |
+| Chatbot formatting | 0.07 | Leftover Markdown (`**bold**`, `###`, bullets) from copy-paste |
+| Paragraph uniformity | 0.06 | Paragraphs of almost identical length |
+| Repeated first word | 0.05 | Sentences that keep starting with the same word |
 
-### Ανθρώπινα σημάδια (μειώνουν το σκορ)
+### Human markers (lower the score)
 
-- **Συντμήσεις** — "don't", "it's" / «γι'», «απ'», «κι»
-- **Προφορικές εκφράσεις** — "honestly", "gonna" / «λοιπόν», «ρε», «βασικά», «τεσπα»
-- **Τυπογραφικές ατέλειες** — διπλά κενά, πεζά μετά από τελεία, κολλημένα κόμματα (τα LLM δεν κάνουν τέτοια λάθη)
-- **Προσωπική αφήγηση** — "I remember", "my mom" / «θυμάμαι», «η μαμά μου», «πέρσι»
-- **Βιβλιογραφικές παραπομπές** — (Smith, 2019), [12]
+- **Contractions:** "don't", "it's" / «γι'», «απ'», «κι»
+- **Informal expressions:** "honestly", "gonna" / «λοιπόν», «βασικά»
+- **Typographic imperfections:** double spaces, lowercase after a full stop, missing spaces after commas
+- **Personal narrative:** "I remember", "my mom" / «θυμάμαι», «πέρσι»
+- **Citations:** (Smith, 2019), [12]
 
-Το τελικό σκορ 0-100% προκύπτει από σταθμισμένο συνδυασμό και λογιστική βαθμονόμηση. Μικρά κείμενα (<200 λέξεις) δίνουν αποτέλεσμα μειωμένης αξιοπιστίας — εμφανίζεται σχετική προειδοποίηση.
+The final 0–100% score comes from a weighted combination with logistic calibration. Short texts
+(<200 words) give a less reliable result and show a warning.
 
-### Ερμηνεία αποτελεσμάτων
+| Score | Meaning |
+|---|---|
+| **< 30%** (green) | Probably human |
+| **30–60%** (orange) | Mixed / uncertain |
+| **> 60%** (red) | Probably AI-generated |
 
-- **< 30% (πράσινο)** — Πιθανώς ανθρώπινο
-- **30-60% (πορτοκαλί)** — Μικτό / αβέβαιο
-- **> 60% (κόκκινο)** — Πιθανώς AI-generated
+The UI also shows **which sentences** carry AI signals and which indicators fired.
 
-Το UI δείχνει επίσης **ποιες συγκεκριμένες προτάσεις** έχουν ενδείξεις AI και ποιοι δείκτες πυροδοτήθηκαν, με μπάρες ανά χαρακτηριστικό.
+### Revision guide
 
-## Οδηγός Διόρθωσης — τι να αλλάξεις πρώτα
+When you check **your own** text, the results answer "what should I change first?". The indicators
+that fired are ranked by their **actual effect on the score**: the same scoring formula is re-run
+with each indicator set to zero and the difference is shown in points (a calculation on the same
+model, not an estimate). For the strongest clichés ("delve into", «διαδραματίζει καθοριστικό ρόλο»)
+it suggests **concrete alternative wording**, only for phrases actually found in your text.
 
-Ξεχωριστή ενότητα στα αποτελέσματα που απαντά στο πραγματικό ερώτημα όταν ελέγχεις **δικό σου** κείμενο: όχι μόνο "πόσο AI μοιάζει", αλλά **τι συγκεκριμένα να διορθώσεις για να το μειώσεις**.
+### Model signatures (experimental)
 
-Οι δείκτες που πυροδότησαν ταξινομούνται κατά **πραγματική επίδραση στο σκορ** — το ίδιο ακριβώς formula βαθμολόγησης ξανατρέχει με κάθε δείκτη μηδενισμένο έναν-έναν, και η διαφορά είναι οι "πόντοι" που εμφανίζονται. Δεν είναι εκτίμηση· είναι υπολογισμός πάνω στο ίδιο μοντέλο που παράγει το κύριο σκορ (επειδή ο συνδυασμός είναι μη-γραμμικός, οι επιδράσεις δεν αθροίζονται ακριβώς στο συνολικό χάσμα — αναμενόμενο, όχι bug).
+`model_signature.py` looks for conversational "signatures" typical of ChatGPT, Gemini or Claude (for
+example "as an AI language model"). These appear almost only in **raw, copy-pasted chat output**; an
+AI-written essay or thesis chapter normally does not contain them, so a low result here **does not
+prove human authorship**. The main score remains the reliable criterion.
 
-Για τις πιο "βαριές" κλισέ φράσεις (π.χ. *"delve into"*, «διαδραματίζει καθοριστικό ρόλο») εμφανίζεται και **συγκεκριμένη προτεινόμενη εναλλακτική διατύπωση**, μόνο για ό,τι όντως βρέθηκε στο δικό σου κείμενο. Για δείκτες που δεν είναι φράση-προς-φράση (π.χ. burstiness, ομοιομορφία παραγράφων) εμφανίζεται γενική συμβουλή διόρθωσης.
+## Signals beyond the score
 
-## Ίχνη Συγκεκριμένου AI Μοντέλου (πειραματικό)
+These checks do **not** change the AI score; they give independent evidence for a human to judge.
 
-Ξεχωριστός, δευτερεύων έλεγχος (`model_signature.py`) που ψάχνει συνομιλιακές «υπογραφές» τυπικές ChatGPT / Gemini / Claude — π.χ. *"as an AI language model"* (ChatGPT), υπερβολικό *"absolutely/definitely"* + πυκνά em-dashes (Gemini), αυτοδιόρθωση και ειλικρινής αβεβαιότητα (Claude). Λειτουργεί σε Ελληνικά και Αγγλικά, τρέχει πάντα (χωρίς κόστος — καθαρό regex, όχι εξωτερικό δίκτυο) και εμφανίζεται σε δική του ενότητα στα αποτελέσματα.
+- **Reference check** (`reference_check.py`). Language models often invent references. The
+  bibliography section is found and each reference is looked up in Crossref and OpenAlex, comparing
+  title and year. The strongest signal is a **DOI that does not exist** or **belongs to another
+  work**. "Not found" is not proof: books and Greek publications are often missing from these
+  databases.
+- **.docx editing history** (`docx_forensics.py`). Word records editing sessions (rsid) and total
+  editing time. Text written almost entirely in one session, or created and saved within minutes, is
+  a reason to ask the student about their drafts, **not proof** ("Save as", Google Docs or
+  LibreOffice change or remove this information).
+- **Fairness note** (`detector_engine.fairness_check`). Detectors often misclassify simple vocabulary
+  as AI, for example from non-native speakers (Liang et al. 2023: 61% false positives on TOEFL
+  essays). When the score is ≥ 42% and vocabulary variety (MATTR) is < 0.78, a warning is shown.
+- **Detector-evasion tricks** (`obfuscation_check.py`). Finds invisible characters (zero-width space
+  etc.), look-alike letters from another alphabet (Cyrillic «а» for Latin "a", Latin "o" inside a
+  Greek word), unusual Unicode spaces and the "tortured phrases" of paraphrasing tools ("counterfeit
+  consciousness" for artificial intelligence; Cabanac et al. 2021). The plagiarism check also
+  normalises these characters, so a disguised copy is still found.
 
-**Σημαντικός περιορισμός — διάβασέ τον πριν το εμπιστευτείς:** αυτές οι φράσεις εμφανίζονται σχεδόν αποκλειστικά σε **ακατέργαστο, αντιγραμμένο chat output** (κάποιος επικόλλησε ολόκληρη την απάντηση μαζί με τη μετα-σχολιαστική «φωνή» του bot). Ένα καθαρό δοκίμιο ή κεφάλαιο διπλωματικής που παρήγαγε AI **δεν** θα περιέχει τυπικά *"as an AI, I can't browse the internet"* — γι' αυτό σε τέτοιο κείμενο ο έλεγχος αυτός θα δείχνει σχεδόν πάντα χαμηλό ή μηδενικό σκορ και στα τρία μοντέλα. **Αυτό ΔΕΝ αποδεικνύει ανθρώπινη συγγραφή** — απλώς αυτός ο συγκεκριμένος έλεγχος δεν βρήκε κάτι. Το βασικό, αξιόπιστο κριτήριο παραμένει το κύριο σκορ AI-vs-άνθρωπος παραπάνω· αυτό εδώ είναι μόνο ένα συμπληρωματικό στοιχείο, χρήσιμο κυρίως όταν κάποιος επικόλλησε raw chat εξαγωγή.
+## Second method: Binoculars (optional)
 
-## Ενδείξεις πέρα από το σκορ (v2.7)
+`binoculars_check.py` implements Hans et al. 2024 ([arXiv:2401.12070](https://arxiv.org/abs/2401.12070)):
+two related language models read the text and its predictability is compared
+(score = perplexity / cross-perplexity; low means AI-like). It needs no training. It is shown as a
+separate line under the score and does not change the main score.
 
-Τρεις έλεγχοι που **δεν** επηρεάζουν το σκορ AI — δίνουν ανεξάρτητες ενδείξεις
-για να κρίνει ο άνθρωπος:
-
-**Έλεγχος βιβλιογραφικών αναφορών** (`reference_check.py`). Τα γλωσσικά
-μοντέλα συχνά επινοούν αναφορές. Βρίσκεται η ενότητα «Βιβλιογραφία /
-References / …», κάθε αναφορά αναζητείται στο Crossref (και στο OpenAlex) και
-συγκρίνονται τίτλος και έτος. Το πιο ισχυρό σήμα είναι **DOI που δεν υπάρχει**
-ή **DOI που ανήκει σε άλλο έργο**. Το «δεν βρέθηκε» δεν είναι απόδειξη —
-βιβλία και ελληνικές εκδόσεις λείπουν συχνά από τις βάσεις. Χρειάζεται
-internet· επιλογή «Έλεγχος αναφορών» στο UI (`refs` / `check_refs` στο API).
-
-**Ιστορικό επεξεργασίας .docx** (`docx_forensics.py`). Το Word καταγράφει
-συνεδρίες επεξεργασίας (rsid) και χρόνο επεξεργασίας μέσα στο αρχείο. Κείμενο
-σχεδόν όλο σε μία συνεδρία, πολύ λίγος χρόνος επεξεργασίας ή δημιουργία και
-αποθήκευση μέσα σε λίγα λεπτά είναι αφορμή για ερώτηση στον φοιτητή για τα
-πρόχειρά του — **όχι απόδειξη** (μία καθισιά, «Αποθήκευση ως», Google Docs ή
-LibreOffice αλλάζουν/σβήνουν αυτά τα στοιχεία). Αρχεία χωρίς ιστορικό Word
-δίνουν μόνο ουδέτερη πληροφορία.
-
-**Σημείωση δικαιοσύνης** (`detector_engine.fairness_check`). Οι ανιχνευτές
-χαρακτηρίζουν συχνά λανθασμένα ως AI το απλό λεξιλόγιο — π.χ. μη φυσικών
-ομιλητών (Liang et al. 2023: 61% ψευδώς θετικά σε δοκίμια TOEFL). Όταν το
-σκορ είναι ≥ 42% και η ποικιλία λεξιλογίου (MATTR) < 0.78, εμφανίζεται
-προειδοποίηση. Βαθμονόμηση: ανθρώπινα κείμενα 0.84–0.96, AI ~0.91, απλό
-δοκίμιο μη φυσικού ομιλητή 0.70 (που χωρίς την προειδοποίηση έπαιρνε 66%
-«ενδείξεις AI»).
-
-**Κόλπα παράκαμψης ανιχνευτών** (`obfuscation_check.py`). Εντοπίζει αόρατους
-χαρακτήρες (zero-width space κ.λπ.), ομοιόγλυφα γράμματα άλλου αλφαβήτου
-(κυριλλικό «а» αντί λατινικό «a», λατινικό «o» μέσα σε ελληνική λέξη),
-ασυνήθιστα κενά Unicode ανάμεσα σε λέξεις και «βασανισμένες φράσεις» εργαλείων
-παράφρασης («counterfeit consciousness» → artificial intelligence· Cabanac et al.
-2021). Επιστημονικά σύμβολα (TNFα, μm, ΔG) και γαλλική τυπογραφία δεν
-μετράνε. Επιπλέον, ο έλεγχος λογοκλοπής «καθαρίζει» πλέον αυτούς τους
-χαρακτήρες πριν από τη σύγκριση, ώστε ένα «μασκαρεμένο» αντίγραφο να
-εντοπίζεται κανονικά (≈94% αντί ≈66% χωρίς το καθάρισμα).
-
-## Δεύτερη μέθοδος: Binoculars (προαιρετική)
-
-`binoculars_check.py` — η μέθοδος των Hans et al. 2024 ([arXiv:2401.12070](https://arxiv.org/abs/2401.12070)):
-δύο συγγενικά γλωσσικά μοντέλα «διαβάζουν» το κείμενο και συγκρίνεται πόσο
-προβλέψιμο είναι (score = perplexity / cross-perplexity· χαμηλό = μοιάζει με
-AI). Δεν χρειάζεται εκπαίδευση· οι συγγραφείς αναφέρουν >90% ανίχνευση με
-0,01% ψευδώς θετικά (Falcon-7B), καλύτερα στα αγγλικά. Εμφανίζεται ως
-ξεχωριστή γραμμή κάτω από το σκορ — δεν αλλάζει το κύριο σκορ.
-
-**Είναι απενεργοποιημένη από προεπιλογή** (βαριές εξαρτήσεις, λήψη μοντέλων):
+It is **off by default** (heavy dependencies, model downloads):
 
 ```bash
 pip install -r requirements-binoculars.txt           # torch + transformers
 AI_DETECTOR_BINOCULARS=qwen2.5-1.5b python ai_detector_server.py
 ```
 
-| Preset | Μοντέλα | Μέγεθος | Όριο |
+| Preset | Models | Size | Threshold |
 |---|---|---|---|
-| `falcon-7b` | Falcon-7B + Falcon-7B-instruct | ~28 GB, GPU | του paper (0,9015) |
-| `qwen2.5-1.5b` | Qwen2.5-1.5B + Instruct | ~6 GB RAM, CPU ok | χρειάζεται βαθμονόμηση |
-| `qwen2.5-0.5b` | Qwen2.5-0.5B + Instruct | ~2 GB RAM | χρειάζεται βαθμονόμηση |
-| `krikri-8b` 🇬🇷 | [Llama-Krikri-8B](https://huggingface.co/ilsp/Llama-Krikri-8B-Base) Base + Instruct (ΙΕΛ/«Αθηνά») | GPU· 4-bit ~12 GB (δωρεάν T4) | χρειάζεται βαθμονόμηση |
-| `meltemi-7b` 🇬🇷 | [Meltemi-7B v1.5](https://huggingface.co/ilsp/Meltemi-7B-v1.5) + Instruct (ΙΕΛ/«Αθηνά») | GPU· 4-bit ~10 GB | χρειάζεται βαθμονόμηση |
-| `custom` | `AI_DETECTOR_BINOCULARS_OBSERVER` / `_PERFORMER` (ίδιος tokenizer) | — | χρειάζεται βαθμονόμηση |
+| `falcon-7b` | Falcon-7B + Falcon-7B-instruct | ~28 GB, GPU | from the paper (0.9015) |
+| `qwen2.5-1.5b` | Qwen2.5-1.5B + Instruct | ~6 GB RAM, CPU ok | needs calibration |
+| `qwen2.5-0.5b` | Qwen2.5-0.5B + Instruct | ~2 GB RAM | needs calibration |
+| `krikri-8b` 🇬🇷 | [Llama-Krikri-8B](https://huggingface.co/ilsp/Llama-Krikri-8B-Base) Base + Instruct (ILSP / Athena RC) | GPU; 4-bit ~12 GB (free T4) | needs calibration |
+| `meltemi-7b` 🇬🇷 | [Meltemi-7B v1.5](https://huggingface.co/ilsp/Meltemi-7B-v1.5) + Instruct (ILSP / Athena RC) | GPU; 4-bit ~10 GB | needs calibration |
+| `custom` | `AI_DETECTOR_BINOCULARS_OBSERVER` / `_PERFORMER` (same tokenizer) | — | needs calibration |
 
-**Ελληνικά μοντέλα (v2.21):** τα `krikri-8b` και `meltemi-7b` είναι εκπαιδευμένα
-σε μεγάλο ελληνικό σώμα κειμένων, άρα «καταλαβαίνουν» καλύτερα το ελληνικό ύφος
-από τα πολυγλωσσικά Qwen — προτιμώνται για ελληνικές εργασίες. Είναι μεγάλα: σε
-GPU NVIDIA φορτώνονται σε 4-bit (`pip install bitsandbytes`) ώστε να χωράνε μαζί
-σε δωρεάν κάρτα 16 GB (βλ. notebook παρακάτω)· `AI_DETECTOR_BINOCULARS_QUANT=8bit|off`
-το αλλάζει. Σε απλό υπολογιστή (CPU) δεν είναι πρακτικά. Άδειες: Krikri — Llama
-3.1 Community License, Meltemi — Apache-2.0. Ο server ελέγχει κατά τη φόρτωση ότι
-observer και performer «κόβουν» το κείμενο ίδια· δεκτή διαφορά είναι μόνο επιπλέον
-special tokens συνομιλίας στο instruct μοντέλο.
+The Greek models `krikri-8b` and `meltemi-7b` are preferred for Greek theses. On an NVIDIA GPU they
+load in 4-bit (`pip install bitsandbytes`; `AI_DETECTOR_BINOCULARS_QUANT=8bit|off` changes it).
+Licences: Krikri, Llama 3.1 Community License; Meltemi, Apache-2.0.
 
-Τα όρια του paper ισχύουν **μόνο** για το Falcon. Για άλλο ζεύγος, τρέξε μία
-φορά τη βαθμονόμηση με γνωστά κείμενα (ιδανικά 20+ ανά κατηγορία, στο είδος
-των εργασιών σου) — το όριο γράφεται στο `binoculars_config.json`:
+The paper's thresholds apply **only** to Falcon. For any other pair, calibrate once with known texts
+(ideally 20+ per class, of the same kind as your theses); the threshold is written to
+`binoculars_config.json`:
 
 ```bash
 AI_DETECTOR_BINOCULARS=qwen2.5-1.5b python tools/calibrate_binoculars.py \
-    --human-dir δείγματα/άνθρωποι --ai-dir δείγματα/ai
+    --human-dir samples/human --ai-dir samples/ai
 ```
 
-Χωρίς βαθμονόμηση εμφανίζεται μόνο το score, χωρίς ετυμηγορία. Στον μαζικό
-έλεγχο δεν τρέχει (θα ήταν πολύ αργό σε CPU).
+**Free GPU: `notebooks/binoculars_gpu.ipynb`.** On a CPU, Binoculars needs ~1–2 minutes per thesis;
+on a GPU, a few seconds. The notebook runs on **Kaggle** (GPU T4 x2 or P100, Internet on) or **Google
+Colab** (T4 GPU). Upload the notebook, upload the theses, run all cells and download `results.zip`;
+the last cell deletes the theses. ⚠ **Privacy:** in the cloud, the documents leave your computer
+(GDPR, student data). Anonymise them first, or use only the local app, which sends nothing.
 
-## Μαζικός έλεγχος & αναφορά
+## Batch checking, history and reports
 
-**Καρτέλα «Μαζικά»** (`POST /analyze-batch`, πεδίο `files`, έως 30 αρχεία):
-αναλύει πολλές εργασίες μαζί, δείχνει πίνακα με σκορ και άλλες ενδείξεις, και
-**συγκρίνει τις εργασίες μεταξύ τους** για κοινά αποσπάσματα (φοιτητές που
-αντέγραψαν ο ένας από τον άλλον). Οι έλεγχοι web/αναφορών παραλείπονται για
-ταχύτητα· «Λεπτομέρειες» ανοίγει την πλήρη ανάλυση κάθε εργασίας.
+- **Batch tab** (`POST /analyze-batch`, up to 30 files): analyses many theses together, shows a table
+  of scores and signals, and **compares the theses with each other** for shared passages. Web checks
+  are skipped for speed.
+- **ZIP from eClass / Moodle:** drop the "download all submissions" ZIP (up to 60 theses) into the
+  Batch tab. Student names are taken from the ZIP structure, and Greek file names from Windows (cp737)
+  are read correctly. `zip_import.py` guards against zip bombs, zip slip, symlinks, encrypted entries
+  and nested archives.
+- **Command line** (no server, no internet):
+  `python tools/batch_analyze.py theses/ --out results/results.csv` writes `results.csv`,
+  `results_pairs.csv` (pairs with shared passages) and `results.json`.
+- **Compare versions:** the **Compare** tab takes the old and new version of the same thesis and shows
+  the score change, the indicators that changed most, how much text changed and which **new** sentences
+  carry AI signals (`version_compare.py`).
+- **Analysis history:** the **History** tab reopens past results without re-analysing. Stored only
+  locally in `.analysis_history.sqlite3`, **without** the full text of the theses, deleted after 30 days
+  (max 100 entries); turn it off completely with `AI_DETECTOR_HISTORY=off`.
+- **Calibrate on your own data:** in the **Corpus** tab, give 10+ theses that were certainly written
+  by people (e.g. before 2022) from your field. Each analysis then shows "of your N human reference
+  theses, X% scored this high or higher" and a suggested threshold. Only scores are kept
+  (`score_calibration.py`).
+- **Check report (.docx):** "📄 Check report" in the results fills in institution, department,
+  student, title and examiner and downloads a Word report with the findings, an "indication, not
+  proof" disclaimer and a signature line. It is built in memory and never stored (`report_docx.py`).
+- **Print / PDF:** the 🖨 button gives a clean printable report.
+- **OCR for scanned PDFs:** if most pages have no text, they go through the free Tesseract OCR
+  (Greek + English), when it is installed. OCR results are marked "📷 OCR" because recognition errors
+  reduce reliability. `AI_DETECTOR_OCR=off` disables it (`ocr_pdf.py`).
 
-**Εκτύπωση / PDF**: το κουμπί «🖨» στα αποτελέσματα ανοίγει την εκτύπωση του
-browser — «Αποθήκευση ως PDF» δίνει αναφορά με όνομα αρχείου, ημερομηνία και
-έκδοση engine, χωρίς τα κουμπιά του UI.
+## Speed and caching
 
-## Ταχύτητα & δωρεάν GPU στο cloud
+- The AI score appears **immediately** (~1–3 s); the internet checks run in the background and fill
+  in when ready.
+- Web and reference checks run **in parallel**, so the total time is roughly the slowest check.
+- Answers from Wikipedia/OpenAlex/Crossref are cached in `.web_cache.sqlite3` (30 days for hits,
+  7 days for "not found"). Only SHA-256 hashes of the queries and public metadata are stored, never
+  thesis text. Disable with `AI_DETECTOR_WEB_CACHE=off`.
+- Wikipedia requests stay serial (one at a time across the whole server), as Wikimedia's policy
+  asks, and slow down automatically after a 429.
 
-**Παράλληλοι έλεγχοι (v2.10):** Wikipedia, Semantic Scholar, Brave/Google και ο
-έλεγχος αναφορών τρέχουν ταυτόχρονα (και οι αναφορές ανά 4), οπότε ο συνολικός
-χρόνος ≈ ο πιο αργός έλεγχος, όχι το άθροισμά τους. Η ανάλυση AI μόνη της
-είναι γρήγορη (~3 s για διπλωματική 40.000 λέξεων)· η αναμονή είναι κυρίως το
-internet. Για τον πιο γρήγορο έλεγχο απενεργοποίησε τον έλεγχο στο web.
+## Security and privacy
 
-**Τοπική cache (v2.11):** οι απαντήσεις Wikipedia/OpenAlex/Crossref κρατιούνται
-στο `.web_cache.sqlite3` (30 μέρες τα ευρήματα, 7 μέρες τα «δεν βρέθηκε»). Ο
-ξαναέλεγχος μιας διορθωμένης εργασίας ρωτά το internet μόνο για όσα άλλαξαν.
-Αποθηκεύονται **μόνο** SHA-256 των αναζητήσεων και δημόσια μεταδεδομένα (τίτλοι,
-έτη, URL) — όχι κείμενο εργασιών. Τα «0 αποτελέσματα» της Wikipedia μπαίνουν
-στην cache μόνο αν ο έλεγχος canary επιβεβαιώσει ότι η Wikipedia απαντά
-κανονικά· σφάλματα δικτύου δεν αποθηκεύονται ποτέ. Απενεργοποίηση:
-`AI_DETECTOR_WEB_CACHE=off` · καθαρισμός: σβήσε το αρχείο.
-
-**Ταχύτερες αναφορές:** όλα τα DOI ελέγχονται με ένα αίτημα στο OpenAlex (όσα
-λείπουν, στο Crossref)· οι συνδέσεις μένουν ανοιχτές (keep-alive) αντί για νέα
-σύνδεση TLS σε κάθε αίτημα· σε «πολλά αιτήματα» (429) γίνεται αναμονή και νέα
-προσπάθεια αντί για αποτυχία. Τα ταυτόχρονα αιτήματα μένουν 4 (όριο Crossref: 5).
-
-**Άμεσο σκορ (v2.13):** η σελίδα δείχνει το σκορ AI και όλες τις τοπικές
-ενδείξεις μόλις τελειώσει η ανάλυση (~1-3 s)· οι έλεγχοι internet (web,
-αναφορές) συνεχίζουν στο παρασκήνιο και τα αποτελέσματά τους εμφανίζονται
-μόνα τους στη θέση τους («⏳ σε εξέλιξη…»). Ασφάλεια: κάθε έλεγχος έχει
-αναγνωριστικό 192 bit (δεν μαντεύεται), τα αποτελέσματα δίνονται μία φορά και
-σβήνονται (ή μετά από 10 λεπτά), μόνο στη μνήμη· το `/jobs/<id>` δέχεται
-μόνο το δικό μας UI (Host allow-list, όχι από άλλα sites, χωρίς cache)· έως 4
-ταυτόχρονοι έλεγχοι — πέρα από αυτό ο έλεγχος γίνεται κανονικά (σύγχρονα).
-
-**Wikipedia με προσεκτικά γρηγορότερο ρυθμό (v2.12):** παύση 1 s αντί για 2 s
-ανάμεσα στα αιτήματα (~2× γρηγορότερα). Τα αιτήματα μένουν σειριακά — ένα τη
-φορά σε όλο τον server, ακόμη κι αν αναλύονται δύο εργασίες μαζί — όπως ζητά η
-πολιτική της Wikimedia, με User-Agent που έχει στοιχεία επικοινωνίας. Αν η
-Wikipedia απαντήσει 429 ή ο έλεγχος canary δείξει «ύποπτα 0 αποτελέσματα», ο
-ρυθμός πέφτει αυτόματα στα 2 s για 10 λεπτά.
-
-**Κλειδί OpenAlex (συνιστάται):** από τον Φεβρουάριο 2026 το OpenAlex χωρίς κλειδί
-δίνει πολύ μικρό ημερήσιο όριο (ο έλεγχος «ακαδημαϊκής βιβλιογραφίας» κάνει
-~12-30 αναζητήσεις ανά εργασία). Πάρε δωρεάν κλειδί από openalex.org (λογαριασμός
-→ API key, ~1.000 αναζητήσεις/μέρα) και βάλ' το στο `search_config.json`
-(`{"openalex_api_key": "..."}`) ή στη μεταβλητή `OPENALEX_API_KEY`. Μένει μόνο
-τοπικά (το αρχείο είναι στο `.gitignore`).
-
-**Ασφάλεια δικτύου:** όλα τα αιτήματα προς Wikipedia/OpenAlex/Crossref
-περνούν από το `http_pool.py`: μόνο HTTPS, μόνο προς αυτές τις υπηρεσίες
-(λίστα επιτρεπτών — ούτε ένα DOI από το κείμενο δεν μπορεί να στείλει αίτημα
-αλλού), πλήρης έλεγχος πιστοποιητικού, όριο μεγέθους απάντησης, και τα
-μηνύματα σφάλματος δεν περιέχουν κλειδιά.
-
-**Μαζικά από τη γραμμή εντολών** (χωρίς server, χωρίς internet):
-
-```bash
-python tools/batch_analyze.py εργασίες/ --out αποτελέσματα/results.csv
-```
-
-Γράφει `results.csv` (μία γραμμή ανά εργασία, ταξινομημένη κατά σκορ — ανοίγει
-σωστά στο Excel), `results_pairs.csv` (εργασίες με κοινά αποσπάσματα) και
-`results.json` (πλήρη στοιχεία). Με `AI_DETECTOR_BINOCULARS=<preset>` τρέχει
-και το Binoculars.
-
-**Binoculars σε δωρεάν GPU — `notebooks/binoculars_gpu.ipynb`:** σε CPU το
-Binoculars θέλει ~1-2 λεπτά ανά διπλωματική· σε GPU λίγα δευτερόλεπτα. Το
-notebook τρέχει στο **Kaggle** (Settings → Accelerator: GPU T4 x2 ή P100,
-Internet: On· ~30 ώρες GPU/εβδομάδα δωρεάν, θέλει επιβεβαίωση κινητού) ή στο
-**Google Colab** (Runtime → Change runtime type → T4 GPU· δωρεάν με
-μη εγγυημένα όρια). Βήματα:
-
-1. Ανέβασε το notebook (File → Upload/Import notebook).
-2. Κώδικας: επειδή το repo είναι ιδιωτικό, πρόσθεσε secret `GITHUB_TOKEN`
-   (fine-grained token, μόνο Contents: Read-only σε αυτό το repo) — Colab:
-   🔑 Secrets, Kaggle: Add-ons → Secrets — ή ανέβασε το repo ως ZIP.
-3. Ανέβασε τις εργασίες (Colab: παράθυρο επιλογής αρχείων· Kaggle: dataset
-   `theses` στο `/kaggle/input/theses`) και τρέξε όλα τα κελιά.
-4. Κατέβασε το `results.zip` (CSV + JSON). Το τελευταίο κελί σβήνει τις εργασίες.
-
-⚠ **Ιδιωτικότητα:** στο cloud οι εργασίες φεύγουν από τον υπολογιστή σου
-(GDPR — δεδομένα φοιτητών). Ανωνυμοποίησε τα αρχεία (σβήσε ονόματα/ΑΜ) ή
-χρησιμοποίησε μόνο την τοπική εφαρμογή, που δεν στέλνει τίποτα. Σε GPU τα
-μοντέλα τρέχουν σε float16/bfloat16 (μισή μνήμη, ίδια ακρίβεια στην πράξη).
+- The server listens **only on 127.0.0.1**. Other computers on your network cannot reach it.
+- Requests from other websites are refused (Host allow-list, cross-site/CSRF checks, security headers).
+- All outgoing requests go through `http_pool.py`: HTTPS only, only to an allow-list of services
+  (a DOI in a document cannot make the tool contact anywhere else), full certificate checks, response
+  size limits, and error messages never contain keys.
+- Uploaded files get safe names and are deleted after analysis. `search_config.json`, `corpus/`,
+  caches and history are in `.gitignore`.
 
 ## API
 
 ```bash
-# Ανάλυση αρχείου
+# Analyse a file
 curl -X POST -F "file=@document.pdf" http://localhost:5000/analyze
 
-# Ανάλυση κειμένου
+# Analyse text
 curl -X POST -H "Content-Type: application/json" \
   -d '{"text": "Your text here..."}' \
   http://localhost:5000/analyze-text
 ```
 
-Χωρίς `progressive` η απάντηση έχει όλα τα αποτελέσματα μαζί (όπως πριν).
-Με `progressive` (form `progressive=1` / JSON `"progressive": true`) το σκορ
-έρχεται αμέσως μαζί με `analysis.external_job`· τα αποτελέσματα web/αναφορών
-από το `GET /jobs/<external_job>` → `{"status": "running"}` ή
-`{"status": "done", "plagiarism": {...}, "references": {...}}` (μία φορά, μετά 404).
+Without `progressive`, the response contains all results at once. With `progressive`
+(form `progressive=1` / JSON `"progressive": true`), the score returns immediately together with
+`analysis.external_job`; poll `GET /jobs/<external_job>` for `{"status": "running"}` or
+`{"status": "done", "plagiarism": {...}, "references": {...}}` (returned once, then 404).
 
-Απάντηση (νέα πεδία v2 μαζί με τα συμβατά v1):
+Example response (abridged):
 
 ```json
 {
@@ -399,118 +297,105 @@ curl -X POST -H "Content-Type: application/json" \
     "confidence": "HIGH",
     "language": "English",
     "verdict": "Πιθανώς AI-generated κείμενο",
+    "verdict_i18n": {"en": "Likely AI-generated text", "el": "Πιθανώς AI-generated κείμενο"},
     "reliability": 100,
-    "features": [ {"name": "ai_phrases", "label": "...", "score": 95.2, "weight": 0.32, "detail": "...", "examples": ["delve into (×2)"]} ],
-    "human_markers_detail": [ ... ],
+    "features": [ {"name": "ai_phrases", "score": 95.2, "weight": 0.32, "examples": ["delve into (×2)"]} ],
     "highlights": [ {"text": "In today's rapidly evolving...", "hits": ["in today's ... world"], "count": 2} ],
     "revision_guide": [
-      {"feature": "ai_phrases", "label": "Χαρακτηριστικές AI φράσεις & λεξιλόγιο",
-       "impact_points": 16.2, "examples": ["delve into (×1)", "it is important to note (×2)"],
-       "advice": "...", "suggestions": [{"found": "delve into", "try": ["look at", "examine", "explore"]}]}
+      {"feature": "ai_phrases", "impact_points": 16.2,
+       "suggestions": [{"found": "delve into", "try": ["look at", "examine", "explore"]}]}
     ],
-    "patterns_found": [ ... ],
-    "human_markers": {"contractions_found": 0, "personal_pronouns": 1, "informal_words": 0},
-    "text_stats": {"characters": 1500, "words": 260, "sentences": 15, "average_sentence_length": 17.3, "paragraphs": 5},
-    "model_signature": {
-      "has_signal": false,
-      "primary_model": null,
-      "primary_score": 5.0,
-      "overall_score": 1.7,
-      "language": "English",
-      "models": {
-        "ChatGPT": {"score": 0.0, "strength": "WEAK", "patterns": []},
-        "Gemini": {"score": 0.0, "strength": "WEAK", "patterns": []},
-        "Claude": {"score": 5.0, "strength": "WEAK", "patterns": [{"pattern": "less_defensive", "description": "...", "occurrences": 0}]}
-      }
-    }
+    "text_stats": {"words": 260, "sentences": 15, "average_sentence_length": 17.3},
+    "model_signature": {"has_signal": false, "primary_model": null}
   }
 }
 ```
 
-## Γλώσσες περιβάλλοντος (UI)
+Every human-readable field also comes in all UI languages (`*_i18n` fields), so switching language
+does not need a new analysis.
 
-Η σελίδα ανοίγει στα **αγγλικά** και αλλάζει γλώσσα από τα κουμπιά πάνω δεξιά
-(η επιλογή θυμάται): **English, Ελληνικά, Deutsch, Français, Português**.
-Τα αποτελέσματα (ετυμηγορία, δείκτες, οδηγός διόρθωσης, μηνύματα σφάλματος)
-μεταφράζονται κι αυτά — ο server στέλνει κάθε κείμενο σε όλες τις γλώσσες
-(πεδία `*_i18n`, π.χ. `verdict_i18n: {"el": ..., "en": ..., "de": ...}`),
-οπότε η αλλαγή γλώσσας δεν χρειάζεται νέα ανάλυση.
+## Adding a UI language
 
-Για **νέα γλώσσα** (π.χ. ιταλικά, `it`):
-1. `detector_academic.html`: πρόσθεσε `it` στο `LANGUAGES` και ένα μπλοκ `it: {...}` στο `STRINGS`.
-2. `detector_engine.py`: πρόσθεσε `"it"` στο `UI_LANGS` και μεταφράσεις στα `FEATURE_LABELS`, `VERDICTS`, `MIXED_VERDICT`, `LANGUAGE_NAMES`, `CONNECTOR_HIT`, `DETAILS`, `FEATURE_ADVICE`.
-3. `model_signature.py` (`EXTRA_DESCRIPTIONS`), `ai_detector_server.py` (`MESSAGES`), `plagiarism_engine.py` (`VALIDATION_MESSAGES`).
+For a new language (e.g. Italian, `it`):
 
-Το `python test_detector.py` (I18N TESTS) αποτυγχάνει αν λείπει κάποια
-μετάφραση από τη μηχανή. Ό,τι δεν έχει μεταφραστεί εμφανίζεται στα αγγλικά.
-Σημείωση: η *ανάλυση* κειμένου υποστηρίζει ελληνικά και αγγλικά κείμενα —
-αυτό είναι ξεχωριστό από τη γλώσσα του περιβάλλοντος.
+1. `detector_academic.html`: add `it` to `LANGUAGES` and an `it: {...}` block to `STRINGS`.
+2. `detector_engine.py`: add `"it"` to `UI_LANGS` and translations to `FEATURE_LABELS`, `VERDICTS`,
+   `MIXED_VERDICT`, `LANGUAGE_NAMES`, `CONNECTOR_HIT`, `DETAILS`, `FEATURE_ADVICE`.
+3. `model_signature.py` (`EXTRA_DESCRIPTIONS`), `ai_detector_server.py` (`MESSAGES`),
+   `plagiarism_engine.py` (`VALIDATION_MESSAGES`).
+
+`python test_detector.py` fails if an engine translation is missing; anything untranslated falls back
+to English. Note that the *text analysis* supports Greek and English documents; that is separate from
+the interface language.
 
 ## Tests
 
 ```bash
-python test_detector.py            # engine, model-signature, revision-guide, i18n, ενδείξεις (αναφορές/docx/δικαιοσύνη)
-python test_detector.py --files    # + δημιουργία docx/pdf και έλεγχος εξαγωγής (θέλει reportlab)
-python test_detector.py --server   # + end-to-end έλεγχος (θέλει τον server να τρέχει)
-python test_detector.py --thesis   # + μικτό έγγραφο με ενότητες, ταχύτητα σε 40k+ λέξεις
-python test_detector.py --plagiarism  # + winnowing corpus, ανθεκτικότητα, Wikipedia (θέλει internet)
-python test_detector.py --security # + CSRF, Host allow-list, security headers (χωρίς server)
-python test_detector.py --binoculars  # + Binoculars με μικρά τοπικά μοντέλα (θέλει torch, χωρίς λήψη)
-node tools/check_ui.js             # UI: συντακτικό JavaScript + πληρότητα μεταφράσεων
+python test_detector.py               # engine, model signature, revision guide, i18n, signals
+python test_detector.py --files       # + builds docx/pdf files and checks extraction (needs reportlab)
+python test_detector.py --server      # + end-to-end checks (the server must be running)
+python test_detector.py --thesis      # + mixed document with sections, speed on 40k+ words
+python test_detector.py --plagiarism  # + corpus winnowing, robustness, Wikipedia (needs internet)
+python test_detector.py --security    # + CSRF, Host allow-list, security headers (no server needed)
+python test_detector.py --binoculars  # + Binoculars with small local models (needs torch)
+node tools/check_ui.js                # UI: JavaScript syntax + translation completeness
 ```
 
-**Αυτόματοι έλεγχοι (CI):** σε κάθε push στο `main` και σε κάθε PR, το GitHub
-Actions (`.github/workflows/ci.yml`) τρέχει lint (ruff), όλα τα tests εκτός από
-`--plagiarism` (εξαρτάται από εξωτερικές υπηρεσίες) σε Python 3.10 και 3.12,
-end-to-end έλεγχο σε πραγματικό server και τον έλεγχο του UI. Το Dependabot
-(`.github/dependabot.yml`) ανοίγει αυτόματα PR για ενημερώσεις ασφαλείας των
-βιβλιοθηκών.
+**CI:** on every push to `main` and every pull request, GitHub Actions (`.github/workflows/ci.yml`)
+runs lint (ruff), all tests except `--plagiarism` on Python 3.10 and 3.12, an end-to-end check against
+a real server and the UI check. Dependabot opens pull requests for dependency updates.
 
-Τρέχοντα αποτελέσματα βαθμονόμησης: AI δείγματα 96-99%, ανθρώπινα 0-29%, διαχωρισμός 88 μονάδες (EN) / 67 μονάδες (EL).
+Current calibration: AI samples score 96–99%, human samples 0–29%; separation of 88 points (EN) and
+67 points (EL).
 
-## Αρχεία
+## Files
 
-| Αρχείο | Ρόλος |
+| File | Role |
 |---|---|
-| `ai_detector_server.py` | Flask server (endpoints + εξαγωγή docx/pdf) |
-| `detector_engine.py` | Πυρήνας ανίχνευσης AI — καθαρή Python, χωρίς εξωτερικές εξαρτήσεις |
-| `model_signature.py` | Ίχνη συγκεκριμένου μοντέλου (ChatGPT/Gemini/Claude) — πειραματικό, δες περιορισμούς παραπάνω |
-| `plagiarism_engine.py` | Έλεγχος λογοκλοπής: winnowing corpus + Wikipedia |
-| `reference_check.py` | Ύπαρξη βιβλιογραφικών αναφορών (Crossref + OpenAlex) |
-| `docx_forensics.py` | Ιστορικό επεξεργασίας .docx (rsid, χρόνος, μεταδεδομένα) |
-| `obfuscation_check.py` | Κόλπα παράκαμψης: αόρατοι χαρακτήρες, ομοιόγλυφα, βασανισμένες φράσεις |
-| `binoculars_check.py`, `tools/calibrate_binoculars.py` | Προαιρετική δεύτερη μέθοδος Binoculars + βαθμονόμηση ορίου |
-| `zip_import.py`, `text_exclusions.py`, `score_calibration.py` | ZIP eClass/Moodle · εξαίρεση παραθεμάτων/βιβλιογραφίας · βαθμονόμηση στα δικά σου δεδομένα |
-| `report_docx.py` | Πρακτικό ελέγχου εργασίας σε Word (.docx) |
-| `ocr_pdf.py` | OCR σκαναρισμένων PDF με Tesseract (προαιρετικό) |
-| `image_reuse.py` | Ίδιες εικόνες/διαγράμματα με το corpus και μεταξύ εργασιών |
-| `analysis_history.py` | Ιστορικό αναλύσεων (τοπικό, με όρια διατήρησης) |
-| `version_compare.py`, `corpus_manager.py` | Σύγκριση εκδόσεων · ασφαλής διαχείριση corpus από τη σελίδα |
-| `background_jobs.py` | Έλεγχοι internet στο παρασκήνιο (άμεσο σκορ) με όρια και TTL |
-| `web_cache.py`, `http_pool.py` | Τοπική cache εξωτερικών ελέγχων · ασφαλείς συνδέσεις keep-alive |
-| `tools/live_smoke.py` | Δοκιμή με τις πραγματικές υπηρεσίες (ενημερωτικό job στο CI) |
-| `tools/batch_analyze.py` | Μαζική ανάλυση φακέλου από τη γραμμή εντολών → CSV/JSON |
-| `notebooks/binoculars_gpu.ipynb` | Notebook Kaggle/Colab: Binoculars σε δωρεάν GPU |
-| `tools/check_ui.js` | Έλεγχος UI: JavaScript + πληρότητα μεταφράσεων |
-| `corpus/` | Ρίξε εδώ παλιές εργασίες για σύγκριση |
-| `detector_academic.html` | Web UI (σερβίρεται στο `/`) |
-| `test_detector.py` | Test suite / βαθμονόμηση |
-| `run.bat`, `run.sh`, `launcher.py` | Εκκίνηση με ένα κλικ (venv, βιβλιοθήκες, browser, συντόμευση) |
-| `update.bat`, `update.sh`, `tools/update.py` | Ενημέρωση χωρίς απώλεια ρυθμίσεων/δεδομένων |
-| `QUICK_START.md` | Οδηγός χρήσης βήμα-βήμα |
-| `docs/` | Ιστορικό αλλαγών (`CHANGELOG.md`), δοκιμαστικά κείμενα, έρευνα για «υπογραφές» μοντέλων |
+| `ai_detector_server.py` | Flask server (endpoints, docx/pdf extraction) |
+| `detector_engine.py` | AI detection core, pure Python with no external dependencies |
+| `model_signature.py` | Model-specific signatures (ChatGPT/Gemini/Claude), experimental |
+| `plagiarism_engine.py` | Plagiarism check: corpus winnowing, Wikipedia, OpenAlex, Brave |
+| `reference_check.py` | Whether references exist (Crossref + OpenAlex) |
+| `docx_forensics.py` | .docx editing history (rsid, editing time, metadata) |
+| `obfuscation_check.py` | Evasion tricks: invisible characters, look-alikes, tortured phrases |
+| `binoculars_check.py`, `tools/calibrate_binoculars.py` | Optional Binoculars method + threshold calibration |
+| `zip_import.py`, `text_exclusions.py`, `score_calibration.py` | eClass/Moodle ZIP · quote/bibliography exclusion · calibration on your data |
+| `report_docx.py` | Word (.docx) check report |
+| `ocr_pdf.py` | OCR for scanned PDFs with Tesseract (optional) |
+| `image_reuse.py` | Reused images/diagrams across the corpus and between theses |
+| `analysis_history.py` | Local analysis history with retention limits |
+| `version_compare.py`, `corpus_manager.py` | Version comparison · safe corpus management from the page |
+| `background_jobs.py` | Background internet checks (instant score) with limits and TTL |
+| `web_cache.py`, `http_pool.py` | Local cache of external checks · safe keep-alive connections |
+| `tools/batch_analyze.py` | Batch analysis of a folder from the command line → CSV/JSON |
+| `tools/live_smoke.py` | Smoke test against the real services |
+| `tools/check_ui.js` | UI check: JavaScript + translation completeness |
+| `notebooks/binoculars_gpu.ipynb` | Kaggle/Colab notebook: Binoculars on a free GPU |
+| `corpus/` | Put past theses here for comparison |
+| `detector_academic.html` | Web UI (served at `/`) |
+| `test_detector.py` | Test suite / calibration |
+| `run.bat`, `run.sh`, `launcher.py` | One-click start (venv, libraries, browser, shortcut) |
+| `update.bat`, `update.sh`, `tools/update.py` | Update without losing settings or data |
+| `QUICK_START.md` | Step-by-step user guide (Greek) |
+| `docs/` | Changelog, sample texts, research notes on model signatures |
 
-Οι παλιές εκδόσεις v1 (`detector.html`, `ai_detector_server_model_specific.py`
-κ.λπ.) αφαιρέθηκαν· υπάρχουν στο ιστορικό του git.
+## Limitations
 
-## Περιορισμοί
+1. **No AI detector is infallible**, commercial ones included (GPTZero, Turnitin). The result is an
+   indication, not proof.
+2. Carefully edited human text in a formal style (e.g. many "Moreover") can score higher.
+3. AI text that a person has rewritten or paraphrased is harder to detect.
+4. Scanned PDFs (images) can only be read with OCR (Tesseract, optional); recognition errors affect
+   the score.
+5. Texts under ~200 words give an uncertain result.
+6. Texts by non-native speakers or in a very formulaic academic style are at higher risk of false
+   positives.
+7. The plagiarism check has **no** access to Turnitin's database; it covers only the local corpus and
+   public sources.
 
-1. **Κανένας AI detector δεν είναι αλάνθαστος** — ούτε τα εμπορικά (GPTZero, Turnitin). Το αποτέλεσμα είναι ένδειξη, όχι απόδειξη.
-2. Επιμελημένο ανθρώπινο κείμενο με «τυπικό» ύφος (π.χ. σχολική έκθεση με πολλά «Επιπλέον») μπορεί να σκοράρει ψηλότερα.
-3. AI κείμενο που έχει ξαναγραφτεί/παραφραστεί από άνθρωπο ανιχνεύεται δυσκολότερα.
-4. Σκαναρισμένα PDF (εικόνες) διαβάζονται μόνο με OCR (Tesseract, προαιρετικό)· τα λάθη αναγνώρισης επηρεάζουν το σκορ.
-5. Κείμενα κάτω από ~200 λέξεις δίνουν αβέβαιο αποτέλεσμα.
-6. Κείμενα μη φυσικών ομιλητών ή πολύ τυποποιημένου ακαδημαϊκού ύφους κινδυνεύουν περισσότερο με ψευδώς θετικό αποτέλεσμα.
-7. Ο έλεγχος λογοκλοπής **δεν** έχει πρόσβαση στη βάση του Turnitin· καλύπτει μόνο το τοπικό corpus και δημόσιες πηγές.
+**Do not use this tool as the only basis for academic-integrity decisions.**
 
-**Μην χρησιμοποιείτε το εργαλείο ως μοναδικό κριτήριο για αποφάσεις ακαδημαϊκής ακεραιότητας.**
+## Licence
+
+[MIT](LICENSE)

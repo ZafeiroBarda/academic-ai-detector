@@ -1,7 +1,7 @@
 # Γρήγορη Εκκίνηση — AI Content Detector
 
 Οδηγός για καθημερινή χρήση, βήμα-βήμα. Οι τεχνικές λεπτομέρειες είναι στο
-[README.md](README.md).
+[README.el.md](README.el.md) (English: [README.md](README.md)).
 
 ## 1. Πρώτη φορά (μία φορά μόνο)
 
