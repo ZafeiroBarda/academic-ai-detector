@@ -10,4 +10,5 @@
 - Scores must be reproducible: no background auto-updating of phrase lists. New AI phrases
   must not fire on ordinary CS/networking vocabulary; run the tests to catch score regressions.
 - Plagiarism check does not cover Turnitin's private database; say so in UI/docs.
-- `main` is protected (PR + required CI checks): after a tested, working change, push a branch and open a PR without asking.
+- After a tested, working change: commit + push to `main` without asking (CI runs on every push).
+- Public repo: commits must use the GitHub noreply author email, never a personal address.
